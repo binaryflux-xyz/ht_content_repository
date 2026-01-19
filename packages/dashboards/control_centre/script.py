@@ -1,0 +1,3 @@
+
+def widgets():
+	return ["hindustantimes/hindustantimes/widgets/top_outliers/","hindustantimes/hindustantimes/widgets/stat_publish/","hindustantimes/hindustantimes/widgets/stat_automation/","hindustantimes/hindustantimes/widgets/stat_detection/","hindustantimes/hindustantimes/widgets/top_detections/","hindustantimes/hindustantimes/widgets/top_streams/","hindustantimes/hindustantimes/widgets/risk_metrics/","hindustantimes/hindustantimes/widgets/top_outliers/","hindustantimes/hindustantimes/widgets/detections_by_categories/","hindustantimes/hindustantimes/widgets/threats_breakdown/","hindustantimes/hindustantimes/widgets/stats_incidents/","hindustantimes/hindustantimes/widgets/mitre_data/","hindustantimes/hindustantimes/widgets/my_queue/"]
