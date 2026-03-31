@@ -1,36 +1,42 @@
+import datetime
+
 # this to return default widget config
 def configure():
     return {
         "searchable": False, #Boolean value depending whether the widget is searchable or not
         "datepicker": False,
         "properties": {"type": "fatalwidget","layout": "conciselayout"},
-        "dimension": {"x": 0, "y": 14, "width": 12, "height": 3} #dimensions of widget on GRID
+        "dimension": {"x": 0, "y": 7, "width": 12, "height": 3} #dimensions of widget on GRID
     }
 
-# this to return query to be used for rendering widget and its parameters
 # def query():
 #     return {
 #         "query": """
 #             SELECT 
-#                 timestamp AS time,
-#                 source_ip AS ipaddress,
+#                 MAX(timestamp) AS time,
+#                 source_country AS country,
+#                 event_details AS message,
 #                 event_level AS alert,
-#                 event_details AS message
+#                 COUNT(*) AS count
 #             FROM 
 #                 aggregation_table
 #             WHERE
-#                 event_level in (0, 1, 2, 3, 4)
+#                 event_level IN (0, 1, 2, 3, 4, 5)
 #                 AND timestamp IS NOT NULL
-#                 AND source_ip IS NOT NULL
+#                 AND source_country IS NOT NULL
 #                 AND event_level IS NOT NULL
 #                 AND event_details IS NOT NULL
 #                 AND type = :type
 #             GROUP BY 
-#                 timestamp, source_ip, event_level, event_details
+#                 source_country, event_level, event_details
+#             ORDER BY 
+#                 time DESC
 #             LIMIT 200
 #         """,
-#         "parameters": {"type":"event_level_host"},
+#         "parameters": {"type": "event_level_host"},
 #     }
+
+
 def query():
     return {
         "query": """
@@ -38,26 +44,27 @@ def query():
                 MAX(timestamp) AS time,
                 source_country AS country,
                 event_details AS message,
-                event_level AS alert,
+                TRY_CAST(event_level AS INTEGER) AS alert,
                 COUNT(*) AS count
-            FROM 
-                aggregation_table
+            FROM aggregation_table
             WHERE
-                event_level IN (0, 1, 2, 3, 4, 5)
+                TRY_CAST(event_level AS INTEGER) IN (0,1,2,3,4,5)
                 AND timestamp IS NOT NULL
                 AND source_country IS NOT NULL
-                AND event_level IS NOT NULL
                 AND event_details IS NOT NULL
                 AND type = :type
             GROUP BY 
-                source_country, event_level, event_details
+                source_country,
+                TRY_CAST(event_level AS INTEGER),
+                event_details
             ORDER BY 
                 time DESC
             LIMIT 200
+
         """,
         "parameters": {"type": "event_level_host"},
     }
-
+  
 # this to return filter queries based on filters selected by user and its parameters
 def filters(filters):
     return None

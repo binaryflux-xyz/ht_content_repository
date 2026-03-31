@@ -1,18 +1,19 @@
 def window():
-    return '10m'
+    return '30m'
 
 def groupby():
-    return ['user_ip']
+    return ['user']
 
 def algorithm(event):
-    user_ip = event.get('user_ip')
-    key = 'linux_sudo_command_from_root_{}'.format(user_ip)
-    key_exists = application.get(key)
-    if key_exists is True:
+    
+    key = application.get("sudo_command")
+    if key is True:
         return 0.0
-    if event.get('action') == 'sudo' and 'root : PWD=/root' in event.get('event_message'):
-        if stats.count('user_ip') > 3:
-            application.put(key, True, 86400)
+      
+    if event.get('process_name') == 'sudo' and 'root : PWD=/root' in event.get('event_details'):
+        if stats.count('sudo_command') > 3:
+            application.put("sudo_command", True, 86400)
+            stats.resetcount('sudo_command')
             return 0.50
     return 0.0
 
@@ -29,7 +30,7 @@ def technique():
     return 'Obfuscated Files or Information (T1027)'
 
 def artifacts():
-    return stats.collect(['hostname', 'event_category', 'action', 'user_ip'])
+    return stats.collect(['host', 'process_name', 'event_action'])
 
 def entity(event):
-    return {'derived': False, 'value': event.get('user_ip'), 'type': 'ipaddress'}
+    return {'derived': False, 'value': event.get('host'), 'type': 'hostname'}

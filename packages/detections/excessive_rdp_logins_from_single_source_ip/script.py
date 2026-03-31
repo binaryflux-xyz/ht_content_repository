@@ -11,6 +11,7 @@ def automate():
 def algorithm(event):
     if event.get('event_id') == 4624 and event.get('logon_type') == 10:
         if stats.count('source_ip') > 5:
+            stats.resetcount('source_ip')
             return 0.75
     return 0.0
 
@@ -20,7 +21,7 @@ def context(event_data):
     dest_user = event_data.get('destination_account_name', '-')
     domain = event_data.get('destination_account_domain', '-')
     host = event_data.get('host', '-')
-    process = event_data.get('logon_processname', '-')
+    process = event_data.get('process_name', '-')
     src_port = event_data.get('source_port', '-')
 
     return (
@@ -38,12 +39,13 @@ def tactic():
     return 'Lateral Movement (TA0008)'
 def technique():
     return 'Remote Services (T1021/001)'
+
   
 def artifacts():
     return stats.collect([
         'source_ip',
         'destination_account_name',
-        'logon_processname',
+        'process_name',
         'destination_account_domain',
         'host',
         'source_port'

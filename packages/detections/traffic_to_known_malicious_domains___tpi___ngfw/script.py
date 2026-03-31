@@ -8,7 +8,7 @@ def investigate():
     return "fortigate_session_analyser"
   
 def automate():
-    return True
+    return False
     
 def algorithm(event):
     if event.get('network_request_method')=='domain' and event.get('event_action')=='blocked' and event.get('event_category_desc') is not None and 'Malicious' in event.get('event_category_desc'):
@@ -69,7 +69,7 @@ def technique():
 
 def artifacts():
     try:
-        return stats.collect(['event_category_desc','event_action','source_device_name','source_ip','network_request_method','user_name'])
+        return stats.collect(['event_category_desc','event_action','source_device_name','source_ip','user'])
     except Exception as e:
         raise e
 

@@ -6,7 +6,7 @@
 
 def window():
     # 10 minute rolling window
-    return '10m'
+    return '20m'
 
 def groupby():
     # scope per host and user
@@ -183,85 +183,6 @@ def algorithm(event):
         return 1.0
 
     return 0.0
-
-
-
-# def _is_whitelisted_account(account):
-#     if not account:
-#         return False
-#     an = account.strip().lower()
-#     for w in WHITELIST_ACCOUNTS:
-#         if w.lower() in an:
-#             return True
-#     return False
-
-# def _is_destructive_action(event):
-
-#     # EventID check
-#     evt = str(event.get("event_id", ""))
-#     if evt not in ("4663", "5145"):
-#         # still allow other file-like events if they have access info, but prefer these IDs
-#         pass
-
-#     # Check various fields for destructive verbs
-#     access_raw = (event.get("access_list_raw") or "") or ""
-#     access_mask = (event.get("access_mask_hex") or "") or ""
-#     access_reason = (event.get("access_reason_detail") or "") or ""
-#     # combine lowercase strings for keyword search
-#     combined = " ".join([str(access_raw), str(access_mask), str(access_reason)]).lower()
-
-#     destructive_keywords = [
-#         "delete",           # obvious
-#         "delete_child",     # directory child deletion
-#         "write",            # write / overwrite
-#         "write_data",       # NTFS verb for write
-#         "append_data",
-#         "rename",           # rename may be used during mass renames for encryption
-#         "set_ea",           # sometimes used by ransomware (extended attributes)
-#         "generic_write",
-#         "create"            # creation of encrypted files could follow deletion of originals
-#     ]
-
-#     for kw in destructive_keywords:
-#         if kw in combined:
-#             return True
-
-#     # As a fallback, examine the access_mask_hex value pattern that often indicates deletions or writes.
-#     # Many environments store hex like '0x10000' etc. We treat presence of hex as ambiguous; rely on keywords mainly.
-#     if access_mask and "0x" in str(access_mask).lower():
-#         # don't assume destructive, return False unless keywords matched above
-#         return False
-
-#     return False
-
-# def algorithm(event):
-#     acct = event.get("source_account_name")
-#     if not acct or acct in ["-", "UNKNOWN", None]:
-#         return 0.0
-
-#     # Ignore whitelisted automation/backup/system accounts
-#     if _is_whitelisted_account(acct):
-#         return 0.0
-
-#     # Heuristic: only consider file access events
-#     evt_id = str(event.get("event_id", ""))
-#     if evt_id not in ("4663", "5145"):
-#         # Still try to detect based on content, but prioritize known file audit IDs
-#         return 0.0
-
-#     # Check if this specific event looks destructive
-#     if not _is_destructive_action(event):
-#         return 0.0
-
-#     # Build per-group stat key so counts are scoped to host+user
-#     stat_key = "massfiledeletionandencription"
-
-#     stats.count(stat_key)
-  
-#     if stats.getcount(stat_key) > 100:
-#       return 1.0
-
-#     return 0.0
 
 def context(event_data):
     acct = event_data.get("source_account_name")

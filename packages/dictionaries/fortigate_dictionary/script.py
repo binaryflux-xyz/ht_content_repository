@@ -1,10 +1,14 @@
 # -*- coding: utf-8 -*-
-import time
-from datetime import datetime, timedelta
 import calendar
 import re
+from datetime import datetime, timedelta
 
-# --- Static lookup for log levels ---
+IST_OFFSET = timedelta(hours=5, minutes=30)
+
+INVALID_VALUES = frozenset(("-", "_", ""))
+
+_TOKEN_RE = re.compile(r'([a-zA-Z0-9_]+)\s*=\s*(".*?"|[^"\s,]+)')
+
 log_levels = {
     "emergency": 0,
     "alert": 1,
@@ -16,120 +20,7 @@ log_levels = {
     "debug": 7
 }
 
-# --- Criteria function ---
-def criteria(metainfo):
-    return (
-        metainfo.get('provider') == 'Fortigate'
-        and metainfo.get('group') == 'Firewall'
-        and metainfo.get('type') == 'Firewall Logs'
-    )
-
-# --- Cleaner function ---
-def clean_dict(d):
-    cleaned = {}
-    for k, v in d.items():
-        if v is None:
-            continue
-        if isinstance(v, list):
-            valid_items = [x for x in v if isinstance(x, basestring) and x.strip() not in ["-", "_"]]
-            if valid_items:
-                cleaned[k] = v
-            continue
-        if isinstance(v, basestring):
-            v = v.strip()
-            if v in ["-", "_"]:
-                continue
-        cleaned[k] = v
-    return cleaned
-
-# --- Timestamp extractor ---
-def timestamp(event):
-    ns = event.get("eventtime")
-    if ns is None:
-        return None
-    epoch_ms = ns // 1000000
-    return int(epoch_ms)
-
-# --- Key-value parser ---
-def parse_kv_line(data):
-    parsed = dict(data)
-    line = data.get("Message", "")
-    if not isinstance(line, str):
-        try:
-            line = line.decode("utf-8", "replace")
-        except AttributeError:
-            line = str(line)
-
-    line = re.sub(r'\\\s+(\w+=)', r' \1', line)
-    tokens = re.findall(r'(?:[^\s"]+|"[^"]*")+', line)
-
-    for token in tokens:
-        if '=' not in token:
-            continue
-        key, value = token.split('=', 1)
-        if value.startswith('"') and value.endswith('"'):
-            value = value[1:-1]
-        if key in parsed and key != 'msg':
-            if not isinstance(parsed[key], list):
-                parsed[key] = [parsed[key]]
-            parsed[key].append(value)
-        else:
-            parsed[key] = value
-    return parsed
-
-# --- Human-readable message generator ---
-def message(event_data):
-    event = parse_kv_line(event_data)
-    parts = []
-    if event.get("action"):
-        text = "The firewall with action {} ".format(event["action"])
-    else:
-        text = "The firewall recorded an event "
-
-    if event.get("attack") or event.get("logdesc"):
-        text += "related to {} ".format(event.get("attack") or event.get("logdesc"))
-    parts.append(text.strip())
-
-    src_parts = []
-    if event.get("user"):
-        src_parts.append("user {}".format(event["user"]))
-    if event.get("srcip"):
-        src_parts.append("IP {}".format(event["srcip"]))
-    if event.get("srcport"):
-        src_parts.append("port {}".format(event["srcport"]))
-    if src_parts:
-        parts.append("from source {}".format(", ".join(src_parts)))
-
-    dst_parts = []
-    if event.get("dstip"):
-        dst_parts.append("IP {}".format(event["dstip"]))
-    if event.get("dstport"):
-        dst_parts.append("port {}".format(event["dstport"]))
-    if event.get("qname"):
-        dst_parts.append("host {}".format(event["qname"]))
-    if dst_parts:
-        parts.append("to destination {}".format(", ".join(dst_parts)))
-
-    if event.get("app"):
-        app_str = event.get("app")
-        parts.append("using application {}".format(app_str))
-    if event.get("service"):
-        srv = event.get("service")
-        if "/" in srv:
-            srv = srv.split("/", 1)[0]
-
-        parts.append("and using {}".format(srv))
-
-    if event.get("severity"):
-        parts.append("with severity {}".format(event["severity"]))
-    if event.get("status"):
-        parts.append("status was {}".format(event["status"]))
-
-    if not parts:
-        return "Firewall event details unavailable."
-    return " ".join(parts) + "."
-
-# --- Optimized mapping table (built once) ---
+# --- Flatten mapping ---
 _MAPPING_TABLE = [
     (["policyname"], "policy_name"),
     (["policyid"], "policy_id"),
@@ -145,13 +36,10 @@ _MAPPING_TABLE = [
     (["catdesc"], "event_category_desc"),
     (["crlevel"], "alert_severity"),
     (["crscore"], "alert_score"),
-    (["dtype"], "alert_type"),
-    (["virusid"], "alert_id"),
     (["error"], "alert_name"),
     (["level"], "event_level"),
     (["severity"], "event_severity"),
     (["remip"], "source_remote_ip"),
-    (["categoryoutcome"], "event_outcome"),
     (["sessionid"], "event_sessionid"),
     (["action"], "event_action"),
     (["msg"], "event_details"),
@@ -165,8 +53,6 @@ _MAPPING_TABLE = [
     (["devname"], "source_device_name"),
     (["devid"], "source_device_id"),
     (["devtype"], "source_device_type"),
-    (["devcategory"], "source_device_category"),
-    (["srcname"], "source_name"),
     (["dstip"], "destination_ip"),
     (["dstport"], "destination_port"),
     (["dstintf"], "destination_device_interface"),
@@ -176,14 +62,13 @@ _MAPPING_TABLE = [
     (["dstcity"], "destination_city"),
     (["dstregion"], "destination_region"),
     (["dstdevtype"], "destination_device_type"),
-    (["user"], "user_name"),
+    (["user"], "user"),
     (["group"], "user_group"),
     (["profile"], "user_role"),
     (["agent"], "user_agent"),
     (["osname"], "os_name"),
     (["service"], "network_protocol"),
     (["dir", "direction"], "network_direction"),
-    (["method"], "network_request_method"),
     (["encryption"], "network_encryption"),
     (["rcvdbyte"], "network_bytes_in"),
     (["sentbyte"], "network_bytes_out"),
@@ -198,49 +83,209 @@ _MAPPING_TABLE = [
     (["apprisk"], "application_risk"),
     (["filename"], "file_name"),
     (["filetype"], "file_extension"),
-    (["filesize"], "file_size"),
     (["url"], "url"),
-    (["agent"], "user_agent"),
 ]
 
-def to_int(value):
-    try:
-        if value is None:
-          return None
-        return int(float(value))
-    except (TypeError, ValueError):
+_MAPPING_LOOKUP = {}
+for sources, dest in _MAPPING_TABLE:
+    for s in sources:
+        _MAPPING_LOOKUP[s] = dest
+
+def init(old_event):
+    # parsed = parse_kv_line(old_event)
+    session.set("event", old_event)
+    return "initialized"
+
+
+def criteria(metainfo):
+    return (
+        metainfo.get('provider') == 'Fortigate'
+        and metainfo.get('group') == 'Firewall'
+        and metainfo.get('type') == 'Network'
+    )
+
+
+# ✅ Optimized parser (same behavior, less CPU)
+def parse_kv_line(data):
+    parsed = data.copy() if isinstance(data, dict) else {}
+    line = data.get("Message", "")
+
+    if not isinstance(line, basestring):
+        try:
+            line = line.decode("utf-8", "replace")
+        except AttributeError:
+            line = str(line)
+
+    for key, value in _TOKEN_RE.findall(line):
+
+        if len(value) >= 2 and value[0] == '"' and value[-1] == '"':
+            value = value[1:-1]
+
+        if key in parsed and key != "msg":
+            existing = parsed[key]
+            if not isinstance(existing, list):
+                parsed[key] = [existing, value]
+            else:
+                existing.append(value)
+        else:
+            parsed[key] = value
+
+    return parsed
+
+
+def clean_dict(d):
+    cleaned = {}
+    _invalid = INVALID_VALUES
+
+    for k, v in d.iteritems():
+
+        if v is None:
+            continue
+
+        if isinstance(v, list):
+            new_list = []
+            for x in v:
+                if isinstance(x, basestring):
+                    x = x.strip()
+                    if x not in _invalid:
+                        new_list.append(x)
+            if new_list:
+                cleaned[k] = new_list
+            continue
+
+        if isinstance(v, basestring):
+            v = v.strip()
+            if v in _invalid:
+                continue
+
+        cleaned[k] = v
+
+    return cleaned
+
+def timestamp(event):
+    event = session.get("event")
+
+    date_str = event.get("date")
+    time_str = event.get("time")
+    event_type = event.get("type")
+    devname = event.get("devname")
+
+    if not date_str or not time_str:
+        print("---------------------------------------------------------------------")
+        print("if not date_str = {0} or not time_str = {1}".format(date_str,time_str))
         return None
-      
-# --- Optimized dictionary creation ---
-def dictionary(event_data):
-    event = parse_kv_line(event_data)
+
+    if devname and "=" in devname:
+        print("---------------------------------------------------------------------")
+        print("if devname and '=' in devname")
+        return None
+
+    try:
+        y, m, d = map(int, date_str.split("-"))
+        hh, mm, ss = map(int, time_str.split(":"))
+        dt = datetime(y, m, d, hh, mm, ss)
+    except:
+        print("---------------------------------------------------------------------")
+        print("except")
+        return None
+
+    dt_utc = dt - IST_OFFSET
+    return int(calendar.timegm(dt_utc.timetuple()) * 1000)
+
+
+def message(event_data):
+    event = session.get("event")
     get = event.get
-    ad = dict.__setitem__
+
+    parts = []
+    append = parts.append
+
+    action = get("action")
+    text = ("The firewall with action %s " % action) if action else "The firewall recorded an event "
+
+    attack = get("attack") or get("logdesc")
+    if attack:
+        text += "related to %s " % attack
+
+    append(text.strip())
+
+    src_parts = []
+    if get("user"):
+        src_parts.append("user %s" % event["user"])
+    if get("srcip"):
+        src_parts.append("IP %s" % event["srcip"])
+    if get("srcport"):
+        src_parts.append("port %s" % event["srcport"])
+    if src_parts:
+        append("from source %s" % ", ".join(src_parts))
+
+    dst_parts = []
+    if get("dstip"):
+        dst_parts.append("IP %s" % event["dstip"])
+    if get("dstport"):
+        dst_parts.append("port %s" % event["dstport"])
+    if get("qname"):
+        dst_parts.append("host %s" % event["qname"])
+    if dst_parts:
+        append("to destination %s" % ", ".join(dst_parts))
+
+    app = get("app")
+    if app:
+        append("using application %s" % app)
+
+    service = get("service")
+    if service:
+        srv = str(service)
+        if "/" in srv:
+            srv = srv.split("/", 1)[0]
+        append("and using %s" % srv)
+
+    if get("severity"):
+        append("with severity %s" % event["severity"])
+    if get("status"):
+        append("status was %s" % event["status"])
+
+    return " ".join(parts) + "." if parts else "Firewall event details unavailable."
+
+
+def to_int(value):
+    if value is None:
+        return None
+    try:
+        return int(float(value))
+    except:
+        return None
+
+
+def dictionary(event_data):
+    event = session.get("event")
     event_dict = {}
+    _invalid = INVALID_VALUES
 
-    for sources, dest in _MAPPING_TABLE:
-        for src in sources:
-            val = get(src)
-            if val and val not in ("-", "_", ""):
-                if dest == "policy_id":
-                    val = str(val)
+    for src, val in event.iteritems():
+        if src in _MAPPING_LOOKUP and val and val not in _invalid:
+            dest = _MAPPING_LOOKUP[src]
 
-                if dest == "network_protocol":
-                    if "/" in val:
-                        val = val.split("/", 1)[0]
+            if dest in ("policy_id", "user"):
+                val = str(val)
 
-                ad(event_dict, dest, val)
-                break
+            elif dest == "network_protocol":
+                val_str = str(val)
+                if "/" in val_str:
+                    val = val_str.split("/", 1)[0]
+
+            event_dict[dest] = val
 
     lvl = event_dict.get("event_level")
     if lvl in log_levels:
         event_dict["event_level"] = log_levels[lvl]
-      
+
     event_dict["event_duration"] = to_int(event_dict.get("event_duration"))
     event_dict["event_category_id"] = to_int(event_dict.get("event_category_id"))
+
     if "destination_port" in event_dict:
         event_dict["destination_port"] = str(event_dict["destination_port"])
     if "source_port" in event_dict:
         event_dict["source_port"] = str(event_dict["source_port"])
-  
+      
     return clean_dict(event_dict)

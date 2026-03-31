@@ -4,11 +4,11 @@ def window():
 def groupby():
     return ['source_ip', 'source_device_name']
 
-def investigate():
-    return "fortigate_session_analyser"
+# def investigate():
+#     return "fortigate_session_analyser"
   
-def automate():
-    return True
+# def automate():
+#     return True
 
 
 # def algorithm(event):
@@ -43,24 +43,24 @@ def automate():
 def algorithm(event):
     src_ip = event.get('source_ip')
     url = event.get('url')
-    key = application.get("blocked_events")
+    # key = application.get("blocked_events")
 
-    if key is True:
-        return 0.0
+    # if key is True:
+    #     return 0.0
     
-    if not src_ip:
-        return 0.0
+    # if not src_ip:
+    #     return 0.0
       
-    incidrrange = cidr.inRange(src_ip, [
-        "10.70.150.0/23",
-        "10.70.151.0/24",
-        "10.70.210.0/24",
-        "10.70.220.0/23",
-        "10.70.222.0/24"
-    ])
+    # incidrrange = cidr.inRange(src_ip, [
+    #     "10.70.150.0/23",
+    #     "10.70.151.0/24",
+    #     "10.70.210.0/24",
+    #     "10.70.220.0/23",
+    #     "10.70.222.0/24"
+    # ])
 
-    if incidrrange:
-        return 0.0
+    # if incidrrange:
+    #     return 0.0
 
     log_subtype = event.get('log_subtype')
 
@@ -81,12 +81,12 @@ def algorithm(event):
             and event.get('log_type') == 'utm'
             and url not in allowed_url
         ):
-            application.put("blocked_events", True, 86400)
+            # application.put("blocked_events", True, 86400)
             return 0.75
 
     if log_subtype == 'ssl':
         if event.get('event_action') == 'blocked' and event.get('log_type') == 'utm':
-            application.put("blocked_events", True, 86400)
+            # application.put("blocked_events", True, 86400)
             return 0.75
 
     return 0.0

@@ -10,11 +10,11 @@ def groupby():
     # aggregate per host + user + source IP
     return ['destination_account_name']
 
-def investigate():
-    return "windows_server_session_analyser"
+# def investigate():
+#     return "windows_server_session_analyser"
 
-def automate():
-    return False
+# def automate():
+#     return False
 
 def algorithm(event):
 
@@ -45,6 +45,7 @@ def algorithm(event):
     if is_success:
       prior_failures = stats.getcount("failedloginfollowedbysuccess")
       if prior_failures >= 5:
+          print("successful_logon")
           return 0.75
 
     return 0.0

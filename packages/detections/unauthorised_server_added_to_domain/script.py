@@ -17,6 +17,7 @@ def investigate():
 
 def automate():
     return False
+
   
 def algorithm(event):
     evt_id = event.get('event_id')
@@ -25,7 +26,7 @@ def algorithm(event):
 
     actor = event.get('source_account_name').upper()
     host = event.get('host').upper()
-    created_account = event.get('target_account_name').upper()
+    created_account = event.get('destination_account_name').upper()
 
     if not actor or not host or not created_account:
         return 0.0
@@ -46,7 +47,7 @@ def algorithm(event):
 def context(event_data):
     actor = event.get('source_account_name')
     host = event.get('host').upper()
-    created_account = event.get('target_account_name')
+    created_account = event.get('destination_account_name')
 
     return "New computer account '%s' was added to the domain on host %s by user %s." % (created, host, actor)
 
@@ -67,9 +68,9 @@ def artifacts():
 
         "source_account_name",
 
-        "target_account_name"
+        "destination_account_name"
     ])
 
 def entity(event):
-    created = event.get('target_account_name')
-    return {"derived": False, "value": created, "type": "hostname"}
+    created = event.get('destination_account_name')
+    return {"derived": False, "value": created, "type": "accountname"}

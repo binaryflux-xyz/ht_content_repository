@@ -8,7 +8,7 @@ def investigate():
     return "fortigate_session_analyser"
   
 def automate():
-    return True
+    return False
 
 def algorithm(event):
     alert_type = event.get('event_alert')

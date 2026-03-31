@@ -10,7 +10,7 @@ def investigate():
     return "fortigate_session_analyser"
   
 def automate():
-    return True
+    return False
 
 def algorithm(event):
 
@@ -18,7 +18,6 @@ def algorithm(event):
         event.get("event_category_id") is not None
         and event.get("user_name") is not None
         and event.get("user_name") not in ["UNKNOWN", "N/A"]
-        and event.get("event_category_id") is not None
         and any(
             category in str(event.get("event_category_id"))
             for category in [
@@ -108,10 +107,8 @@ def technique():
     return "Application Layer Protocol (T1071)"
 
 def artifacts():
-    try:
-        return stats.collect(["event_category_id", "source_ip", "network_protocol", "applicationname","destination_country"])
-    except Exception as e:
-        raise e
+  return stats.collect(["event_category_id", "source_ip", "network_protocol", "applicationname","destination_country"])
+  
 
 def entity(event):
     return {"derived": False, "value": event.get("source_ip"), "type": "ipaddress"}

@@ -1,85 +1,50 @@
-# -*- coding: utf-8 -*-
-import json
 import time
-from datetime import datetime, timedelta
+from datetime import datetime
 import re
 
+
+# this to return True/False based on which this message will qualify to be used for datamodel
 def criteria(metainfo):
-    return (
-        metainfo['provider'] == 'Microsoft'
-        and metainfo['group'] == 'Windows Events'
+    return metainfo['provider'] == 'Microsoft' and metainfo['group'] == 'Windows Events' \
         and metainfo['type'] == 'Audit'
-    )
 
 
-def clean_dict(d):
-    cleaned = {}
-    for k, v in d.items():
-        if v is None:
-            continue
-
-        # Case 1: list
-        if isinstance(v, list):
-            valid_items = [x for x in v if isinstance(x, basestring) and x.strip() not in ["-", "_"]]
-            if valid_items:
-                cleaned[k] = v
-            continue
-
-        # Case 2: string
-        if isinstance(v, basestring):
-            v = v.strip()
-            if v in ["-", "_"]:
-                continue
-
-        cleaned[k] = v
-    return cleaned
-
-
-def timestamp(data):
-    log_str = data.get("log")
-    try:
-        event = json.loads(log_str)
-    except ValueError as e:
-        print("❌ JSON Decode Error: {}".format(str(e)))
-        print("🔹 Problematic log_str (raw):")
-        print(log_str)
-        return None
-
-    datestring = event.get("EventTime")
-    if not datestring:
-        return None
-
-    dt_ist = datetime.strptime(datestring, "%Y-%m-%d %H:%M:%S")
-    dt_utc = dt_ist - timedelta(hours=5, minutes=30)
-    epoch_time = time.mktime(dt_utc.timetuple()) + dt_utc.microsecond / 1e6
-    return int(epoch_time * 1000)
-
+def timestamp(event):
+    datestring = event["EventTime"]
+    dt = datetime.strptime(datestring, "%Y-%m-%d %H:%M:%S")  # Parse the string to datetime
+    epoch_time = time.mktime(dt.timetuple())  # Convert to seconds since epoch
+    milliseconds = int(epoch_time * 1000)  # Convert to milliseconds
+    return milliseconds
 
 def modifydata(json_data):
     if "PrivilegeList" in json_data:
-        privileges = re.split(r"\s+", json_data["PrivilegeList"].strip())
-        json_data["PrivilegeList"] = [priv for priv in privileges if priv]
+        privileges = re.split(r"\s+", json_data["PrivilegeList"].strip())  # Splitting on any whitespace
+        json_data["PrivilegeList"] = [priv for priv in privileges if priv]  # Remove empty elements
     return json_data
-
-
-def message(data):
-    log_str = data.get("log")
-    event = json.loads(log_str)
+  
+# this to return user readable text as message extracted from event
+def message(event):
     parts = []
 
+    # Hostname and Event ID
     if event.get("Hostname"):
         parts.append("host {}".format(event["Hostname"]))
     if event.get("EventID"):
         parts.append("event ID {}".format(event["EventID"]))
+
+    # Source info
     if event.get("SubjectUserName"):
         parts.append("initiated by account name {}".format(event["SubjectUserName"]))
     if event.get("IpAddress"):
         parts.append("from IP {}".format(event["IpAddress"]))
     if event.get("ProcessName"):
         parts.append("running process {}".format(event["ProcessName"]))
+
+    # Severity
     if event.get("Severity"):
         parts.append("with severity {}".format(event["Severity"]))
 
+    # Destination info
     dest_info = []
     if event.get("TargetUserName"):
         dest_info.append("user {}".format(event["TargetUserName"]))
@@ -90,93 +55,70 @@ def message(data):
 
     if dest_info:
         parts.append("targeting " + ", ".join(dest_info))
+
+    # Logon Type (replacing privileges)
     if event.get("LogonType"):
         parts.append("via logon type {}".format(event["LogonType"]))
 
+    # Final sentence
     if parts:
         return "This event is from " + " ".join(parts) + "."
 
+# Dictonary
+def dictionary(event_data):
+    event=modifydata(event_data)
+     # Core mapping (common fields)
+    base_keys = {
+        "event_id": "EventID",
+        "event_category": "Category",
+        "event_type": "EventType",
+        "host": "Hostname",
+        # "event_message": "Message",
+        "source_account_name": "SubjectUserName",
+        "source_account_domain": "SubjectDomainName",
+        "source_account_sid": "SubjectUserSid",
+        "source_logon_id": "SubjectLogonId",
+        "source_ip": "SourceAddress",
+        "source_port": "SourcePort",
+        "source_workstation": "SourceName",
+        "source_modulename": "SourceModuleName",
+        "event_level": "SeverityValue",
+        "event_severity": "Severity"
+    }
 
-# ------------------------------------------------------------------------
-#  Optimized Drop-in Replacement for dictionary()
-# ------------------------------------------------------------------------
-def dictionary(data):
-    log_str = data.get("log")
-    if not log_str:
-        return {}
+    # Optional fields
+    optional_keys = {
+        "destination_account_name": "TargetUserName",
+        "destination_account_domain": "TargetDomainName",
+        "destination_account_sid": "TargetUserSid",
+        "destination_logon_id": "TargetLogonId",
+        "destination_port": "DestPort",
+        "destination_ip": "DestAddress",
+        "process_id": "ProcessID",
+        "process_name": "ProcessName",
+        "source_logon_process": "LogonProcessName",
+        "logon_type": "LogonType",
+        "share_name": "ShareName",
+        "share_path": "ShareLocalPath",
+        "target_relative_path": "RelativeTargetName",
+        "access_mask_hex": "AccessMask",
+        "access_list_raw": "AccessList",
+        "access_reason_detail": "AccessReason",
+        "privileges": "PrivilegeList",
+        "applicationname": "Application"
+    }
 
-    try:
-        event = json.loads(log_str)
-    except ValueError:
-        return {}
+    # Build base dictionary
+    event_dict = dict((k, event.get(v)) for k, v in base_keys.items())
 
-    event = modifydata(event)
-    get = event.get
-    ad = dict.__setitem__
+    # Add optional fields only if present
+    for k, v in optional_keys.items():
+        val = event.get(v)
+        if val is not None:
+            # Convert process_id explicitly to string
+            if k == "process_id":
+                val = str(val)
+            event_dict[k] = val
 
-    event_dict = {}
+    return event_dict
 
-    # --- Core fields ---
-    mapping = [
-        (["EventID"], "event_id"),
-        (["Category"], "event_category"),
-        (["EventType"], "event_type"),
-        (["Hostname"], "host"),
-        (["Message"], "event_message"),
-    ]
-
-    # --- Extended / optional fields ---
-    mapping.extend([
-        (["TargetUserSid"], "destination_account_sid"),
-        (["TargetUserName"], "destination_account_name"),
-        (["TargetDomainName"], "destination_account_domain"),
-        (["TargetLogonId"], "destination_logon_id"),
-        (["DestPort"], "destination_port"),
-        (["DestAddress"], "destination_ip"),
-        (["SubjectUserName"], "source_account_name"),
-        (["SubjectDomainName"], "source_account_domain"),
-        (["SubjectUserSid"], "source_account_sid"),
-        (["SubjectLogonId"], "source_logon_id"),
-        (["IpAddress"], "source_ip"),
-        (["IpPort"], "source_port"),
-        (["SourceName"], "source_workstation"),
-        (["SourceModuleName"], "source_modulename"),
-        (["SeverityValue"], "event_level"),
-        (["Severity"], "event_severity"),
-        (["Channel"], "event_channel"),
-        (["LogonType"], "logon_type"),
-        (["AuthenticationPackageName"], "source_authentication_package"),
-        (["ElevatedToken"], "source_elevated_token"),
-        (["LogonProcessName"], "source_logon_process"),
-        (["ShareName"], "share_name"),
-        (["ShareLocalPath"], "share_path"),
-        (["RelativeTargetName"], "target_relative_path"),
-        (["AccessMask"], "access_mask_hex"),
-        (["AccessList"], "access_list_raw"),
-        (["AccessReason"], "access_reason_detail"),
-        (["PrivilegeList"], "privileges"),
-        (["ServiceName"], "service_name"),
-        (["ImagePath"], "service_binary_path"),
-        (["ServiceAccount"], "service_account"),
-        (["StartType"], "service_start_type"),
-        (["ParentProcessName"], "parent_process_name"),
-        (["Process Command Line"], "command_line"),
-    ])
-
-    # --- Populate in one pass ---
-    for srcs, dest in mapping:
-        for src in srcs:
-            val = get(src)
-            if val not in (None, "-", "_", "UNKNOWN", ""):
-                ad(event_dict, dest, val)
-                break
-
-    # --- Process name logic (preserve original behavior) ---
-    process_name = get("ProcessName")
-    new_process_name = get("NewProcessName")
-    if process_name and process_name.strip() not in ["-", "_"]:
-        event_dict["source_process_name"] = process_name
-    elif new_process_name and new_process_name.strip() not in ["-", "_"]:
-        event_dict["source_process_name"] = new_process_name
-
-    return clean_dict(event_dict)

@@ -1,15 +1,14 @@
 def window():
     return None
 
-
 def groupby():
     return ['source_remote_ip']
 
 def investigate():
-    return "fortigate_ip_session_analyser"
-  
+    return "fortigate_session_analyser"
+
 def automate():
-    return True
+    return False
 
 def algorithm(event):
     event_level = event.get("event_level")
@@ -18,7 +17,7 @@ def algorithm(event):
 
     if key is True:
         return 0.0
-      
+  
     if event_level == 1 and action == "ssl-login-fail":
         application.put("alert_level", True, 86400)
         return 0.75
@@ -60,7 +59,7 @@ def technique():
     return "Application Layer Protocol (T1071)"
 
 def artifacts():
-    return stats.collect(['user_name', 'log_subtype', 'event_action', 'source_country', 'source_remote_ip', 'tunnel_type'])
+    return stats.collect(['user', 'log_subtype', 'event_action', 'source_country', 'source_remote_ip', 'tunnel_type'])
 
 def entity(event):
     return {"derived": False, "value": event.get("source_remote_ip"), "type": "remoteip"}

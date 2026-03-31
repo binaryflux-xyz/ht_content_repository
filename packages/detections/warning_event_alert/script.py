@@ -1,25 +1,25 @@
 def window():
-    return '1d'
+    return None
 
 
 def groupby():
     return ['source_ip']
 
 def algorithm(event):
+    key = application.get("event_level_warning")
+    
+    if key is True:
+        return 0.0
+      
     destination_ip = event.get("destination_ip")
-    dnsservers = ['10.10.102.52','10.10.2.52']
+    # dnsservers = []
 
-    if event.get("event_level") == 4 and destination_ip not in dnsservers:
-      # Increment count for qualifying warning events (mirrors encrypted_proxy pattern)
-        stats.count("event_level_warning")
-        count = stats.getcount("event_level_warning")
-        # Return score only at the 15th occurrence
-        if count == 30:
-            return 0.50
+    if event.get("event_level") == 4:
+      application.put("event_level_warning", True, 86400)
+      return 0.50
 
     return 0.0
                 
-
 
 def context(event):
     source_hw_vendor = event.get("source_hw_vendor")
@@ -33,8 +33,8 @@ def context(event):
     policy_name = event.get("policy_name")
     event_duration = event.get("event_duration")
     network_bytes_in = event.get("network_bytes_in")
-    vpn=event.get("details").get("vpn")
-    vpntype=event.get("details").get("vpntype")
+    # vpn=event.get("details").get("vpn")
+    # vpntype=event.get("details").get("vpntype")
     source_device_name=event.get("source_device_name")
     network_packets_in=event.get("network_packets_in")
     network_packets_out=event.get("network_packets_out")
@@ -75,12 +75,12 @@ def context(event):
         context += "lasted for " + event_duration + " seconds and "
     if network_bytes_in:
         context += "exchanged " + network_bytes_in + " bytes. "
-    if vpntype or vpn:
-        context += "It was part of the "
-        if vpntype:
-            context += vpntype + " VPN "
-        if vpn:
-            context += "identified as " + vpn + ". "
+    # if vpntype or vpn:
+    #     context += "It was part of the "
+    #     if vpntype:
+    #         context += vpntype + " VPN "
+    #     if vpn:
+    #         context += "identified as " + vpn + ". "
     if source_device_name:
         context += "The device, named " + source_device_name + ", "
     if network_packets_in:

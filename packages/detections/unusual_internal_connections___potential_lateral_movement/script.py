@@ -8,7 +8,7 @@ def investigate():
     return "fortigate_session_analyser"
   
 def automate():
-    return True
+    return False
 
 def algorithm(event):  
     srcintf = event.get("source_device_interface")
@@ -21,6 +21,7 @@ def algorithm(event):
     dest_ip = stats.accumulate(['destination_ip'])
     unique_country=len(dest_ip.get("destination_ip"))
     if unique_country > 10:
+      stats.dissipate(['destination_ip'])
       return 0.75
     return 0.0
 

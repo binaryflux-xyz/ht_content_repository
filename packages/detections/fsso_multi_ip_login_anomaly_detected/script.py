@@ -8,7 +8,7 @@ def investigate():
     return "fortigate_session_analyser"
   
 def automate():
-    return True
+    return False
 
 def algorithm(event):  
     action = event.get("event_action")
@@ -23,6 +23,7 @@ def algorithm(event):
     unique_ip=len(ip.get('source_ip'))
     if unique_ip > 5:
       stats.dissipate(['source_ip'])
+      print("fsso")
       return 0.75
     return 0.0
 
@@ -57,7 +58,7 @@ def technique():
     return 'Valid Accounts (T1078)'
 
 def artifacts():
-    return stats.collect(['user_name', 'source_ip','event_action', 'source_device_name'])
+    return stats.collect(['user', 'source_ip','event_action', 'source_device_name'])
 
 def entity(event):
     return {'derived': False, 'value': event.get('source_ip'), 'type': 'ipaddress'}

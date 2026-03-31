@@ -8,7 +8,7 @@ def window():
 
 def groupby():
     # Group by host and actor for correlation
-    return ['host', 'account_name']
+    return ['host', 'source_account_name']
 
 def investigate():
     return "windows_server_session_analyser"
@@ -40,7 +40,7 @@ def algorithm(event):
 
 
 def context(event_data):
-    actor = event.get('account_name')
+    actor = event.get('source_account_name')
     host = event.get('host')
 
     return (
@@ -61,9 +61,9 @@ def technique():
 def artifacts():
     return stats.collect([
         "host",
-       "account_name",
+       "source_account_name",
         "process_name"])
 
 def entity(event):
-    actor = event.get('account_name')
+    actor = event.get('source_account_name')
     return {"derived": False, "value": actor, "type": "accountname"}

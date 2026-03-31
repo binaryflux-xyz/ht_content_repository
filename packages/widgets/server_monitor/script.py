@@ -16,8 +16,8 @@ def configure():
 # this to return query to be used for rendering widget and its parameters
 def query():
   return {
-      'query': 'select max(timestamp) as last_activity_time, count(*) as total_events, host from aggregation_table  where host is not null and type = :type group by host',
-      'parameters': {"type":"realtime_health_monitor"}
+      'query': 'select max(timestamp) as last_activity_time, count(*) as total_events, host from aggregation_table  where host is not null and provider= :provider and type = :type group by host',
+      'parameters': {"type":"realtime_health_monitor","provider":"Microsoft"}
   }
 
 

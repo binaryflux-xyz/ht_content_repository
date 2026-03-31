@@ -26,7 +26,7 @@ def algorithm(event):
     privileges = [priv.lower() for priv in event.get("privileges", [])]
 
     # List of known system accounts to ignore
-    ignored_accounts = ["system", "local service", "network service", "administrator","SANAKA$"]
+    ignored_accounts = ["system", "local service", "network service", "administrator"]
 
     # List of high-risk privileges
     critical_privileges = [
@@ -37,6 +37,9 @@ def algorithm(event):
     ]
 
     # Ignore known system accounts
+    if "$" in user:
+        return 0.0
+      
     if user in ignored_accounts:
         return 0.0  # Ignore system accounts
 
@@ -61,7 +64,6 @@ def context(event_data):
 
     return base
 
-  
 def criticality():
     return 'HIGH'
       

@@ -1,5 +1,19 @@
+EVENT_IDS = {5152, 5157, 7045, 4698, 5145, 4663, 5140, 4625, 805, 808, 4624}
+
 def condition(event):
-    if event.get('event_id') == 5152 or event.get('event_id') == 5157 or event.get('event_id') == 7045 or event.get('event_id') == 4698 or event.get('event_id') == 5145 or event.get('event_id') == 4663 or event.get('event_id') == 5140 or event.get('event_id') == 4625 or event.get('event_id') == 805 or event.get('event_id') == 808 or event.get('event_id') == 4624:
+    if event['event_id'] in EVENT_IDS:
         return True
     else:
         return False
+
+
+
+
+
+
+
+# def condition(event):
+#     if event.get('event_id') ==  or event.get('event_id') ==  or event.get('event_id') ==  or event.get('event_id') ==  or event.get('event_id') ==  or event.get('event_id') ==  or event.get('event_id') ==  or event.get('event_id') ==  or event.get('event_id') ==  or event.get('event_id') ==  or event.get('event_id') == :
+#         return True
+#     else:
+#         return False

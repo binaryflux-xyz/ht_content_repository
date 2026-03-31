@@ -22,6 +22,7 @@ def algorithm(event):
     if event.get('event_id') == 4625:
         if stats.count('high_frequency_failed_logons_for_account_name') >= 5:
             stats.resetcount('high_frequency_failed_logons_for_account_name')
+            print("high_frequenty")
             return 0.75
     return 0.0
 

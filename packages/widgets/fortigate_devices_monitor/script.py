@@ -9,14 +9,14 @@ def configure():
         "searchable": False,
       "datepicker": False,
       "properties": {"type": "table"},
-        "dimension": {"x":0,"y":7,"width": 4, "height": 7},
+        "dimension": {"x":4,"y":0,"width": 4, "height": 7},
        "icon":"Fortigate"
     }
 
 # this to return query to be used for rendering widget and its parameters
 def query():
     return {
-        'query': 'select max(timestamp) as last_activity_time, count(*) as total_events, source_device_name  from aggregation_table  where source_device_name is not null and type = :type group by source_device_name',
+        'query': 'select max(timestamp) as last_activity_time, count(*) as total_events, source_device_name  from aggregation_table  where source_device_name is not null and source_device_name NOT LIKE \'%=%\' and LENGTH(TRIM(source_device_name)) > 2 and type = :type group by source_device_name',
         'parameters': {"type":"fortigate_realtime_server_monitor"}
     }
 

@@ -4,7 +4,9 @@ def window():
 def groupby():
     return ['source_ip']
 
-
+def investigate():
+    return "fortigate_session_analyser"
+  
 def automate():
     return False
 

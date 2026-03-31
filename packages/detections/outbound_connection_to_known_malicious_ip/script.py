@@ -28,8 +28,7 @@ def algorithm(event):
         return 0.75
 
     return 0.0
-
-  
+ 
 def context(event_data):
     
     # Safely extract values with defaults

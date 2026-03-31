@@ -5,7 +5,7 @@ def groupby():
     return None
 
 def automate():
-    return True
+    return False
 
 def algorithm(event):  
     action = event.get('event_action')

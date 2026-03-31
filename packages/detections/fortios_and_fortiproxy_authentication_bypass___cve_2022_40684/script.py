@@ -9,12 +9,12 @@ def investigate():
     return "fortigate_session_analyser"
   
 def automate():
-    return True
+    return False
 
 def algorithm(event_data):
     if event_data.get(
-        "user_name"
-    ) is not None and "local_process_access" in event_data.get("user_name"):
+        "user"
+    ) is not None and "local_process_access" in event_data.get("user"):
         return 0.75
     return 0.0
 

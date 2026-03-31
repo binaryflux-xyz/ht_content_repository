@@ -55,7 +55,8 @@ def render(results):
         total = row.get("total_events", 0)
         formatted_total = _format_number(total)
         data.append([last_activity_time, host, formatted_total])
-
+    print("labels",labels)
+    print("data",data)
     return {
         "result": {
             "labels": labels,

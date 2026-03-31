@@ -1,16 +1,13 @@
-def transform(event) :
-    sentbytes = (
-        int(event.get("network_bytes_out"))
-        if event.get("network_bytes_out") is not None
-        else 0
-    )
-    receivedbytes = (
-        int(event.get("network_bytes_in"))
-        if event.get("network_bytes_in") is not None
-        else 0
-    )
+def safe_int(value):
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
 
-    bytesTransferred = sentbytes + receivedbytes
-    event["network_bytes_transferred"] = bytesTransferred
+def transform(event):
+    sentbytes = safe_int(event.get("network_bytes_out"))
+    receivedbytes = safe_int(event.get("network_bytes_in"))
 
-    return event  # Return the enriched event
+    event["network_bytes_transferred"] = sentbytes + receivedbytes
+    return event
+  

@@ -5,11 +5,11 @@ def window():
 def groupby():
     return ['destination_account_name', 'host']
 
-def investigate():
-    return "windows_server_session_analyser"
+# def investigate():
+#     return "windows_server_session_analyser"
 
-def automate():
-    return False
+# def automate():
+#     return False
 
 def _is_whitelisted_account(account):
     if not account:
@@ -35,7 +35,7 @@ def algorithm(event):
     if event.get("event_id") != 4624:
         return 0.0
 
-    if event.get('logon_type') not in [2, 3, 10]:
+    if event.get('logon_type') not in ['2', '3', '10']:
         return 0.0
       
     source_ip = event.get('source_ip')
@@ -47,10 +47,10 @@ def algorithm(event):
     if _is_whitelisted_ip(source_ip) or _is_whitelisted_account(account):
         return 0.0
       
-    sourceipsdict = stats.collect(['source_ip'])
+    sourceipsdict = stats.accumulate(['source_ip'])
     unique_ips=len(sourceipsdict.get("source_ip"))
     if unique_ips>4:
-       stats.resetcollect(['source_ip'])
+       stats.dissipate(['source_ip'])
       
     if unique_ips == 4:
       return 0.5

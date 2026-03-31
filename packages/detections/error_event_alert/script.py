@@ -9,21 +9,21 @@ def algorithm(event):
 
     src_ip = event.get('source_ip')
 
-    incidrrange = cidr.inRange(src_ip, [
-        "10.70.150.0/23",
-        "10.70.151.0/24",
-        "10.70.210.0/24",
-        "10.70.220.0/23",
-        "10.70.222.0/24"
-    ])
+    # incidrrange = cidr.inRange(src_ip, [
+    #     "10.70.150.0/23",
+    #     "10.70.151.0/24",
+    #     "10.70.210.0/24",
+    #     "10.70.220.0/23",
+    #     "10.70.222.0/24"
+    # ])
 
-    if incidrrange:
-        return 0.0
+    # if incidrrange:
+    #     return 0.0
       
     if key is True:
         return 0.0
       
-    if event.get("event_level") == 3 and event.get("event") in ['SSL', 'SSL VPN alert', 'SSL VPN exit error']:
+    if event.get("event_level") == 3: #and event.get("event") in ['SSL', 'SSL VPN alert', 'SSL VPN exit error']:
         application.put("error_level", True, 86400)
         return 0.75
 

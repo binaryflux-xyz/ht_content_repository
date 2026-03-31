@@ -8,7 +8,7 @@ def investigate():
     return "fortigate_session_analyser"
   
 def automate():
-    return True
+    return False
 
 def algorithm(event):  
     dst_port = event.get('destination_port')
@@ -17,7 +17,7 @@ def algorithm(event):
     protocol = event.get('network_protocol')
 
     # Trigger if type matches and destination IP is malicious
-    if dst_port not in [80, 443, 53, 123, 25] and dstintfrole == 'wan' and action == 'accept' and protocol in ['HTTPS', 'DNS']:
+    if dst_port not in ['80', '443', '53', '123', '25'] and dstintfrole == 'wan' and action == 'accept' and protocol in ['HTTPS', 'DNS']:
         return 0.75
     return 0.0
 
